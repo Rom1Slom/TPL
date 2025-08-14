@@ -1,0 +1,78 @@
+{% extends 'base.html' %}
+
+{% block title %}Debug Connexion{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header">
+                    <h3>🔍 Debug Connexion</h3>
+                </div>
+                <div class="card-body">
+                    <div id="debug-info" class="alert alert-info">
+                        <h5>Informations de session :</h5>
+                        <ul>
+                            <li>Utilisateur authentifié : {{ request.user.is_authenticated }}</li>
+                            <li>Utilisateur actuel : {{ request.user.username|default:"Anonyme" }}</li>
+                            <li>Session key : {{ request.session.session_key|default:"Pas de session" }}</li>
+                            <li>CSRF Token : {{ csrf_token }}</li>
+                        </ul>
+                    </div>
+                    
+                    <form id="debug-form" method="post">
+                        {% csrf_token %}
+                        <div class="mb-3">
+                            <label for="username" class="form-label">Nom d'utilisateur :</label>
+                            <input type="text" class="form-control" id="username" name="username" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="password" class="form-label">Mot de passe :</label>
+                            <input type="password" class="form-control" id="password" name="password" required>
+                        </div>
+                        <button type="submit" class="btn btn-primary">Tester la connexion</button>
+                    </form>
+                    
+                    <div id="result" class="mt-4"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.getElementById('debug-form').addEventListener('submit', function(e) {
+    e.preventDefault();
+    
+    const formData = new FormData(this);
+    
+    fetch(window.location.href, {
+        method: 'POST',
+        body: formData,
+        headers: {
+            'X-CSRFToken': formData.get('csrfmiddlewaretoken')
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        const resultDiv = document.getElementById('result');
+        let html = '<div class="alert alert-info"><h5>Résultat du test :</h5><pre>';
+        html += JSON.stringify(data, null, 2);
+        html += '</pre></div>';
+        resultDiv.innerHTML = html;
+        
+        if (data.login_successful) {
+            setTimeout(() => {
+                window.location.href = '/permanences/';
+            }, 3000);
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        document.getElementById('result').innerHTML = 
+            '<div class="alert alert-danger">Erreur: ' + error + '</div>';
+    });
+});
+</script>
+{% endblock %}

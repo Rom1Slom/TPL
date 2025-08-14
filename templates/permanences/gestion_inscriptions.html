@@ -1,0 +1,202 @@
+{% extends 'base.html' %}
+
+{% block title %}Gestion des Inscriptions{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-md-8">
+        <h1><i class="fas fa-users-cog"></i> Gestion des Inscriptions</h1>
+        <p class="text-muted">Semaine du {{ week_start|date:"d/m/Y" }} au {{ week_end|date:"d/m/Y" }}</p>
+    </div>
+    <div class="col-md-4 text-end">
+        <div class="btn-group" role="group">
+            <a href="?week={{ prev_week|date:'Y-m-d' }}" class="btn btn-outline-primary">
+                <i class="fas fa-chevron-left"></i> Précédente
+            </a>
+            <a href="{% url 'permanences:calendrier' %}" class="btn btn-secondary">
+                <i class="fas fa-eye"></i> Vue publique
+            </a>
+            <a href="?week={{ next_week|date:'Y-m-d' }}" class="btn btn-outline-primary">
+                Suivante <i class="fas fa-chevron-right"></i>
+            </a>
+        </div>
+    </div>
+</div>
+
+<div class="alert alert-info">
+    <i class="fas fa-info-circle"></i> 
+    <strong>Mode administrateur :</strong> 
+    Vous pouvez inscrire et désinscrire des utilisateurs aux créneaux.
+</div>
+
+<div class="row">
+    {% for date, creneaux in creneaux_par_jour.items %}
+    <div class="col-12 mb-4">
+        <div class="card">
+            <div class="card-header bg-primary text-white">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-calendar-day"></i>
+                    {{ date|date:"l d/m/Y" }}
+                    {% if date == today %}
+                        <span class="badge bg-light text-dark ms-2">Aujourd'hui</span>
+                    {% endif %}
+                </h5>
+            </div>
+            <div class="card-body p-0">
+                {% for creneau in creneaux %}
+                <div class="border-bottom p-4 {% if creneau.est_passe %}bg-light{% endif %}">
+                    <div class="row align-items-center">
+                        <div class="col-md-3">
+                            <h6 class="mb-1">
+                                <i class="fas fa-clock"></i>
+                                {{ creneau.heure_debut|time:"H:i" }} - {{ creneau.heure_fin|time:"H:i" }}
+                            </h6>
+                            <span class="badge
+                                {% if creneau.complet %}bg-danger{% elif creneau.places_disponibles <= 1 %}bg-warning{% else %}bg-success{% endif %}">
+                                {% with creneau.inscriptions.count as nb_inscriptions %}
+                                    {{ nb_inscriptions }}/{{ creneau.max_personnes }} inscrits
+                                {% endwith %}
+                            </span>
+                            {% if creneau.est_passe %}
+                                <span class="badge bg-secondary ms-1">Passé</span>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="col-md-6">
+                            {% with creneau.inscriptions.all as inscriptions %}
+                                {% if inscriptions %}
+                                    <strong>Inscrits :</strong>
+                                    <ul class="list-unstyled mb-0 mt-1">
+                                        {% for inscription in inscriptions %}
+                                            {% if not inscription.annulee %}
+                                            <li class="d-flex justify-content-between align-items-center py-1">
+                                                <span>
+                                                    <i class="fas fa-user"></i>
+                                                    {{ inscription.utilisateur.first_name|default:inscription.utilisateur.username }}
+                                                    ({{ inscription.utilisateur.username }})
+                                                </span>
+                                                {% if not creneau.est_passe %}
+                                                <form method="post" action="{% url 'permanences:annuler' inscription.id %}" 
+                                                      class="d-inline"
+                                                      onsubmit="return confirm('Êtes-vous sûr de vouloir annuler l\'inscription de {{ inscription.utilisateur.username }} ?');">
+                                                    {% csrf_token %}
+                                                    <button type="submit" class="btn btn-sm btn-outline-danger">
+                                                        <i class="fas fa-times"></i>
+                                                    </button>
+                                                </form>
+                                                {% endif %}
+                                            </li>
+                                            {% endif %}
+                                        {% endfor %}
+                                    </ul>
+                                {% else %}
+                                    <em class="text-muted">Aucune inscription</em>
+                                {% endif %}
+                            {% endwith %}
+                        </div>
+                        
+                        <div class="col-md-3">
+                            {% if not creneau.est_passe and not creneau.complet %}
+                                <form method="post" action="{% url 'permanences:inscrire' creneau.id %}">
+                                    {% csrf_token %}
+                                    <div class="input-group">
+                                        <select name="utilisateur_id" class="form-select form-select-sm" required>
+                                            <option value="">Choisir un utilisateur</option>
+                                            {% for utilisateur in creneau.utilisateurs_disponibles %}
+                                                <option value="{{ utilisateur.id }}">
+                                                    {{ utilisateur.first_name|default:utilisateur.username }} ({{ utilisateur.username }})
+                                                </option>
+                                            {% endfor %}
+                                        </select>
+                                        <button type="submit" class="btn btn-sm btn-success">
+                                            <i class="fas fa-plus"></i>
+                                        </button>
+                                    </div>
+                                </form>
+                            {% elif creneau.complet and not creneau.est_passe %}
+                                <span class="text-danger">
+                                    <i class="fas fa-ban"></i> Complet
+                                </span>
+                            {% elif creneau.est_passe %}
+                                <span class="text-muted">
+                                    <i class="fas fa-clock"></i> Passé
+                                </span>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                {% empty %}
+                <div class="p-3 text-center text-muted">
+                    <i class="fas fa-calendar-times"></i>
+                    Aucun créneau disponible
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+    {% empty %}
+    <div class="col-12">
+        <div class="alert alert-warning text-center">
+            <i class="fas fa-calendar-times"></i>
+            <strong>Aucun créneau disponible</strong> pour cette semaine.
+            <br><small>Vous pouvez <a href="{% url 'admin:permanences_creneauhoraire_add' %}" class="alert-link">créer de nouveaux créneaux</a>.</small>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+<div class="mt-4">
+    <div class="card">
+        <div class="card-header">
+            <h5><i class="fas fa-tools"></i> Actions rapides</h5>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-3">
+                    <a href="{% url 'admin:permanences_creneauhoraire_add' %}" class="btn btn-info w-100">
+                        <i class="fas fa-plus"></i> Ajouter un créneau
+                    </a>
+                </div>
+                <div class="col-md-3">
+                    <a href="{% url 'admin:permanences_inscription_changelist' %}" class="btn btn-primary w-100">
+                        <i class="fas fa-list"></i> Toutes les inscriptions
+                    </a>
+                </div>
+                <div class="col-md-3">
+                    <a href="{% url 'admin:auth_user_changelist' %}" class="btn btn-secondary w-100">
+                        <i class="fas fa-users"></i> Gérer les utilisateurs
+                    </a>
+                </div>
+                <div class="col-md-3">
+                    <a href="{% url 'permanences:calendrier' %}" class="btn btn-outline-primary w-100">
+                        <i class="fas fa-eye"></i> Vue publique
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Améliorer l'expérience utilisateur avec des confirmations
+document.addEventListener('DOMContentLoaded', function() {
+    // Auto-soumission du formulaire d'inscription quand un utilisateur est sélectionné
+    const selectElements = document.querySelectorAll('select[name="utilisateur_id"]');
+    selectElements.forEach(function(select) {
+        select.addEventListener('change', function() {
+            if (this.value) {
+                const form = this.closest('form');
+                const username = this.options[this.selectedIndex].text;
+                if (confirm(`Inscrire ${username} à ce créneau ?`)) {
+                    form.submit();
+                } else {
+                    this.value = '';
+                }
+            }
+        });
+    });
+});
+</script>
+{% endblock %}

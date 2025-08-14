@@ -1,0 +1,165 @@
+{% extends 'base.html' %}
+
+{% block title %}Mes Inscriptions{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-md-8">
+        <h1><i class="fas fa-list"></i> Mes Inscriptions</h1>
+        <p class="text-muted">Historique de vos inscriptions aux permanences</p>
+    </div>
+    <div class="col-md-4 text-end">
+        <a href="{% url 'permanences:calendrier' %}" class="btn btn-primary">
+            <i class="fas fa-calendar"></i> Retour au calendrier
+        </a>
+    </div>
+</div>
+
+{% if inscriptions %}
+<div class="row">
+    {% for inscription in inscriptions %}
+    <div class="col-md-6 col-lg-4 mb-3">
+        <div class="card h-100 
+            {% if inscription.annulee %}border-danger{% elif inscription.creneau.est_passe %}border-secondary{% else %}border-success{% endif %}">
+            
+            <div class="card-header 
+                {% if inscription.annulee %}bg-danger text-white{% elif inscription.creneau.est_passe %}bg-secondary text-white{% else %}bg-success text-white{% endif %}">
+                <h6 class="card-title mb-0">
+                    <i class="fas fa-calendar-day"></i>
+                    {{ inscription.creneau.date|date:"l d/m/Y" }}
+                </h6>
+            </div>
+            
+            <div class="card-body">
+                <div class="mb-2">
+                    <strong>
+                        <i class="fas fa-clock"></i>
+                        {{ inscription.creneau.heure_debut|time:"H:i" }} - {{ inscription.creneau.heure_fin|time:"H:i" }}
+                    </strong>
+                </div>
+                
+                <div class="mb-2">
+                    <small class="text-muted">
+                        <i class="fas fa-calendar-plus"></i>
+                        Inscrit le {{ inscription.date_inscription|date:"d/m/Y à H:i" }}
+                    </small>
+                </div>
+                
+                {% if inscription.annulee %}
+                    <div class="mb-2">
+                        <span class="badge bg-danger">
+                            <i class="fas fa-times"></i> Annulée
+                        </span>
+                        {% if inscription.date_annulation %}
+                        <br>
+                        <small class="text-muted">
+                            le {{ inscription.date_annulation|date:"d/m/Y à H:i" }}
+                        </small>
+                        {% endif %}
+                    </div>
+                {% elif inscription.creneau.est_passe %}
+                    <div class="mb-2">
+                        <span class="badge bg-secondary">
+                            <i class="fas fa-check"></i> Effectuée
+                        </span>
+                    </div>
+                {% else %}
+                    <div class="mb-2">
+                        <span class="badge bg-success">
+                            <i class="fas fa-clock"></i> À venir
+                        </span>
+                    </div>
+                {% endif %}
+                
+                {% if inscription.commentaire %}
+                <div class="mb-2">
+                    <small>
+                        <strong>Commentaire :</strong><br>
+                        {{ inscription.commentaire }}
+                    </small>
+                </div>
+                {% endif %}
+                
+                <div class="mt-2">
+                    <small class="text-muted">
+                        <i class="fas fa-users"></i>
+                        {{ inscription.creneau.inscriptions.count }}/{{ inscription.creneau.max_personnes }} inscrits
+                    </small>
+                </div>
+            </div>
+            
+            {% if not inscription.annulee and not inscription.creneau.est_passe %}
+            <div class="card-footer">
+                <form method="post" action="{% url 'permanences:annuler' inscription.id %}" 
+                      onsubmit="return confirm('Êtes-vous sûr de vouloir annuler cette inscription ?');">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-sm btn-outline-danger w-100">
+                        <i class="fas fa-times"></i> Annuler l'inscription
+                    </button>
+                </form>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+<div class="mt-4">
+    <div class="card">
+        <div class="card-body">
+            <h5 class="card-title"><i class="fas fa-info-circle"></i> Informations</h5>
+            <div class="row">
+                <div class="col-md-4">
+                    <div class="text-center">
+                        <h3 class="text-success">{{ inscriptions|length }}</h3>
+                        <small class="text-muted">Total inscriptions</small>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="text-center">
+                        <h3 class="text-primary">
+                            {% with actives=inscriptions|length %}
+                                {% for inscription in inscriptions %}
+                                    {% if inscription.annulee %}
+                                        {% with actives=actives|add:"-1" %}{% endwith %}
+                                    {% endif %}
+                                {% endfor %}
+                                {{ actives }}
+                            {% endwith %}
+                        </h3>
+                        <small class="text-muted">Inscriptions actives</small>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="text-center">
+                        <h3 class="text-warning">
+                            {% with futures=0 %}
+                                {% for inscription in inscriptions %}
+                                    {% if not inscription.annulee and not inscription.creneau.est_passe %}
+                                        {% with futures=futures|add:"1" %}{% endwith %}
+                                    {% endif %}
+                                {% endfor %}
+                                {{ futures }}
+                            {% endwith %}
+                        </h3>
+                        <small class="text-muted">À venir</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% else %}
+<div class="text-center py-5">
+    <div class="mb-4">
+        <i class="fas fa-calendar-times fa-4x text-muted"></i>
+    </div>
+    <h3>Aucune inscription</h3>
+    <p class="text-muted">Vous n'avez encore aucune inscription aux permanences.</p>
+    <a href="{% url 'permanences:calendrier' %}" class="btn btn-primary">
+        <i class="fas fa-plus"></i> S'inscrire à un créneau
+    </a>
+</div>
+{% endif %}
+{% endblock %}

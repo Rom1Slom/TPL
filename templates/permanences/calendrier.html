@@ -1,0 +1,212 @@
+{% extends 'base.html' %}
+
+{% block title %}Calendrier des Permanences{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-md-8">
+        <h1><i class="fas fa-calendar"></i> Calendrier du TPL - Gare de Creil</h1>
+        <p class="text-muted">Semaine du {{ week_start|date:"d/m/Y" }} au {{ week_end|date:"d/m/Y" }}</p>
+    </div>
+    <div class="col-md-4 text-end">
+        <div class="btn-group" role="group">
+            <a href="?week={{ prev_week|date:'Y-m-d' }}" class="btn btn-outline-primary">
+                <i class="fas fa-chevron-left"></i> Précédente
+            </a>
+            <a href="?" class="btn btn-primary">
+                <i class="fas fa-home"></i> Aujourd'hui
+            </a>
+            <a href="?week={{ next_week|date:'Y-m-d' }}" class="btn btn-outline-primary">
+                Suivante <i class="fas fa-chevron-right"></i>
+            </a>
+        </div>
+    </div>
+</div>
+
+{% if not user.is_authenticated %}
+<div class="alert alert-info">
+    <i class="fas fa-info-circle"></i> 
+    <strong>Connexion requise :</strong> 
+    Vous devez être connecté pour vous inscrire aux permanences. 
+    <a href="{% url 'login' %}" class="alert-link">Se connecter</a>
+</div>
+{% else %}
+<div class="alert alert-success">
+    <i class="fas fa-info-circle"></i> 
+    <strong>Bienvenue {{ user.first_name|default:user.username }} !</strong> 
+    Vous pouvez vous inscrire aux créneaux disponibles en cliquant sur "S'inscrire".
+    {% if user.is_superuser %}
+        <br><small>En tant qu'administrateur, vous avez aussi accès au <a href="{% url 'permanences:gestion' %}" class="alert-link">mode de gestion avancée</a>.</small>
+    {% endif %}
+</div>
+{% endif %}
+
+<div class="row">
+    {% for date, creneaux in creneaux_par_jour.items %}
+    <div class="col-md-6 col-lg-4 mb-4">
+        <div class="card">
+            <div class="card-header bg-light">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-calendar-day"></i>
+                    {{ date|date:"l d/m/Y" }}
+                    {% if date == today %}
+                        <span class="badge bg-primary ms-2">Aujourd'hui</span>
+                    {% endif %}
+                </h5>
+            </div>
+            <div class="card-body p-0">
+                {% for creneau in creneaux %}
+                <div class="creneau-card p-3 border-bottom 
+                    {% if creneau.est_passe %}passe{% endif %}
+                    {% if creneau.complet and not creneau.est_passe %}complet{% endif %}
+                    {% if creneau.user_inscription %}inscrit{% endif %}">
+                    
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <h6 class="mb-1">
+                                <i class="fas fa-clock"></i>
+                                {{ creneau.heure_debut|time:"H:i" }} - {{ creneau.heure_fin|time:"H:i" }}
+                            </h6>
+                            <div class="mb-2">
+                                <span class="badge places-badge
+                                    {% if creneau.complet %}bg-danger{% elif creneau.places_disponibles <= 1 %}bg-warning{% else %}bg-success{% endif %}">
+                                    {{ creneau.inscriptions.count }}/{{ creneau.max_personnes }} inscrits
+                                </span>
+                            </div>
+                        </div>
+                        
+                        <div class="text-end">
+                            {% if user.is_superuser %}
+                                {% if creneau.user_inscription %}
+                                    <div class="mb-2">
+                                        <span class="badge bg-info">
+                                            <i class="fas fa-user"></i> Vous êtes inscrit
+                                        </span>
+                                    </div>
+                                {% endif %}
+                                {% if not creneau.est_passe %}
+                                    <a href="{% url 'permanences:gestion' %}?week={{ week_start|date:'Y-m-d' }}" class="btn btn-sm btn-primary">
+                                        <i class="fas fa-users-cog"></i> Gérer
+                                    </a>
+                                {% endif %}
+                            {% elif user.is_authenticated %}
+                                {% if creneau.user_inscription %}
+                                    <div class="d-flex gap-2 align-items-center">
+                                        <span class="badge bg-success">
+                                            <i class="fas fa-check"></i> Inscrit
+                                        </span>
+                                        {% if not creneau.est_passe %}
+                                            <form method="post" action="{% url 'permanences:auto_desinscription' creneau.user_inscription.id %}" class="d-inline">
+                                                {% csrf_token %}
+                                                <button type="submit" class="btn btn-sm btn-outline-danger" 
+                                                        onclick="return confirm('Confirmer l\'annulation de votre inscription ?')">
+                                                    <i class="fas fa-times"></i> Annuler
+                                                </button>
+                                            </form>
+                                        {% endif %}
+                                    </div>
+                                {% elif creneau.est_passe %}
+                                    <span class="text-muted">
+                                        <i class="fas fa-clock"></i> Passé
+                                    </span>
+                                {% elif creneau.complet %}
+                                    <span class="text-danger">
+                                        <i class="fas fa-ban"></i> Complet
+                                    </span>
+                                {% else %}
+                                    <form method="post" action="{% url 'permanences:auto_inscription' creneau.id %}" class="d-inline">
+                                        {% csrf_token %}
+                                        <button type="submit" class="btn btn-sm btn-success" 
+                                                onclick="return confirm('Confirmer votre inscription à ce créneau ?')">
+                                            <i class="fas fa-plus"></i> S'inscrire
+                                        </button>
+                                    </form>
+                                {% endif %}
+                                
+                                {% if user.is_superuser and not creneau.est_passe %}
+                                    <div class="mt-2">
+                                        <small class="text-muted">
+                                            <i class="fas fa-cog"></i> 
+                                            <a href="{% url 'permanences:gestion' %}?week={{ week_start|date:'Y-m-d' }}" class="text-decoration-none">
+                                                Mode administrateur
+                                            </a>
+                                        </small>
+                                    </div>
+                                {% endif %}
+                            {% else %}
+                                <a href="{% url 'login' %}" class="btn btn-sm btn-outline-primary">
+                                    <i class="fas fa-sign-in-alt"></i> Connexion
+                                </a>
+                            {% endif %}
+                        </div>
+                    </div>
+                    
+                    {% if creneau.inscriptions.count > 0 %}
+                    <div class="mt-2">
+                        <small class="text-muted">
+                            <i class="fas fa-users"></i> Inscrits :
+                            {% for inscription in creneau.inscriptions.all %}
+                                {% if not inscription.annulee %}
+                                    {{ inscription.utilisateur.first_name|default:inscription.utilisateur.username }}{% if not forloop.last %}, {% endif %}
+                                {% endif %}
+                            {% endfor %}
+                        </small>
+                    </div>
+                    {% endif %}
+                </div>
+                {% empty %}
+                <div class="p-3 text-center text-muted">
+                    <i class="fas fa-calendar-times"></i>
+                    Aucun créneau disponible
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+    {% empty %}
+    <div class="col-12">
+        <div class="alert alert-warning text-center">
+            <i class="fas fa-calendar-times"></i>
+            <strong>Aucun créneau disponible</strong> pour cette semaine.
+            {% if user.is_superuser %}
+            <br><small>En tant qu'administrateur, vous pouvez <a href="{% url 'admin:permanences_creneauhoraire_add' %}" class="alert-link">créer de nouveaux créneaux</a>.</small>
+            {% endif %}
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+{% if user.is_superuser %}
+<div class="mt-4">
+    <div class="card">
+        <div class="card-header">
+            <h5><i class="fas fa-cog"></i> Administration</h5>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-3">
+                    <a href="{% url 'permanences:gestion' %}" class="btn btn-success w-100">
+                        <i class="fas fa-users-cog"></i> Gérer les inscriptions
+                    </a>
+                </div>
+                <div class="col-md-3">
+                    <a href="{% url 'admin:permanences_creneauhoraire_add' %}" class="btn btn-info w-100">
+                        <i class="fas fa-plus"></i> Ajouter un créneau
+                    </a>
+                </div>
+                <div class="col-md-3">
+                    <a href="{% url 'admin:permanences_creneauhoraire_changelist' %}" class="btn btn-primary w-100">
+                        <i class="fas fa-list"></i> Gérer les créneaux
+                    </a>
+                </div>
+                <div class="col-md-3">
+                    <a href="{% url 'admin:permanences_horaireouverture_changelist' %}" class="btn btn-warning w-100">
+                        <i class="fas fa-clock"></i> Horaires d'ouverture
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+{% endblock %}
