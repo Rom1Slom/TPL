@@ -1,7 +1,7 @@
 from django.db import models
 from django.contrib.auth.models import User
 from django.core.exceptions import ValidationError
-from datetime import datetime, time
+from datetime import datetime, time, timedelta
 
 
 class HoraireOuverture(models.Model):
@@ -85,13 +85,17 @@ class CreneauHoraire(models.Model):
             return False
     
     def clean(self):
-        if self.heure_fin <= self.heure_debut:
-            raise ValidationError("L'heure de fin doit être après l'heure de début")
-        
-        # Vérifier que le créneau dure exactement 1 heure
-        duree = datetime.combine(self.date, self.heure_fin) - datetime.combine(self.date, self.heure_debut)
-        if duree.seconds != 3600:  # 1 heure = 3600 secondes
-            raise ValidationError("Un créneau doit durer exactement 1 heure")
+        from django.core.exceptions import ValidationError
+        if self.heure_debut is not None and self.heure_fin is not None:
+            if self.heure_debut >= self.heure_fin:
+                raise ValidationError("L'heure de début doit être strictement inférieure à l'heure de fin.")
+            # Autorise les plages > 1h pour l'admin, la découpe se fait dans save_model
+            delta = (
+                datetime.combine(self.date, self.heure_fin) -
+                datetime.combine(self.date, self.heure_debut)
+            )
+            if delta < timedelta(hours=1):
+                raise ValidationError("Un créneau doit durer au moins 1 heure.")
 
 
 class Inscription(models.Model):

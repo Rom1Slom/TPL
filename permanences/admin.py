@@ -3,50 +3,82 @@ from django.utils.html import format_html
 from django.urls import reverse
 from django.utils.safestring import mark_safe
 from .models import HoraireOuverture, CreneauHoraire, Inscription
+from django import forms
+from django.shortcuts import render, redirect
+from django.urls import path
+from datetime import date, datetime, timedelta
 
 
-@admin.register(HoraireOuverture)
-class HoraireOuvertureAdmin(admin.ModelAdmin):
-    list_display = ['jour_semaine_display', 'heure_ouverture', 'heure_fermeture', 'actif']
-    list_filter = ['actif', 'jour_semaine']
-    list_editable = ['actif']
-    ordering = ['jour_semaine']
-    
-    def jour_semaine_display(self, obj):
-        """Affiche le nom du jour en français"""
-        jours = ['Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi', 'Dimanche']
-        try:
-            return jours[obj.jour_semaine]
-        except (IndexError, TypeError):
-            return f"Jour {obj.jour_semaine}"
-    jour_semaine_display.short_description = 'Jour'
+class PlageCreneauxForm(forms.Form):
+    date_debut = forms.DateField(label="Date de début")
+    heure_debut = forms.TimeField(label="Heure de début")
+    heure_fin = forms.TimeField(label="Heure de fin")
+    repeter = forms.BooleanField(label="Répéter chaque semaine", required=False)
+    date_fin = forms.DateField(label="Jusqu'au (si répétition)", required=False)
+   
 
+class CreneauHoraireForm(forms.ModelForm):
+    repeter = forms.BooleanField(label="Répéter chaque semaine", required=False)
+    date_fin = forms.DateField(label="Jusqu'au (si répétition)", required=False, widget=forms.DateInput(attrs={'type': 'date'}))
 
-class InscriptionInline(admin.TabularInline):
-    model = Inscription
-    extra = 0
-    readonly_fields = ['date_inscription']
-    fields = ['utilisateur', 'annulee', 'date_inscription', 'commentaire']
-    
-    def has_add_permission(self, request, obj=None):
-        """Empêche l'ajout d'inscriptions via l'inline si le créneau est complet"""
-        if obj and hasattr(obj, 'places_disponibles'):
-            try:
-                return obj.places_disponibles > 0
-            except:
-                pass
-        return True
+    class Meta:
+        model = CreneauHoraire
+        fields = "__all__"
 
 
 @admin.register(CreneauHoraire)
 class CreneauHoraireAdmin(admin.ModelAdmin):
+
+    form = CreneauHoraireForm 
+
     list_display = ['date', 'heure_debut', 'heure_fin', 'max_personnes', 'actif', 'nb_inscriptions_actives', 'places_libres']
     list_filter = ['actif', 'date', 'max_personnes']
     list_editable = ['actif']
     search_fields = ['date']
     date_hierarchy = 'date'
     ordering = ['-date', 'heure_debut']
-    inlines = [InscriptionInline]
+    # inlines = [InscriptionInline]
+    
+    
+
+    def get_urls(self):
+        urls = super().get_urls()
+        custom_urls = [
+            path('ajouter-plage/', self.admin_site.admin_view(self.ajouter_plage))
+        ]
+        return custom_urls + urls
+
+    def ajouter_plage(self, request):
+        if request.method == "POST":
+            form = PlageCreneauxForm(request.POST)
+            if form.is_valid():
+                date_debut = form.cleaned_data['date_debut']
+                heure_debut = form.cleaned_data['heure_debut']
+                heure_fin = form.cleaned_data['heure_fin']
+                repeter = form.cleaned_data['repeter']
+                date_fin = form.cleaned_data['date_fin'] if form.cleaned_data['date_fin'] else date_debut
+
+                current_date = date_debut
+                while current_date <= date_fin:
+                    h = heure_debut
+                    while (datetime.combine(current_date, h) + timedelta(hours=1)).time() <= heure_fin:
+                        fin = (datetime.combine(current_date, h) + timedelta(hours=1)).time()
+                        CreneauHoraire.objects.create(
+                            date=current_date,
+                            heure_debut=h,
+                            heure_fin=fin,
+                            actif=True
+                        )
+                        h = fin
+                    if repeter:
+                        current_date += timedelta(days=7)
+                    else:
+                        break
+                self.message_user(request, "Créneaux créés avec succès !")
+                return redirect("..")
+        else:
+            form = PlageCreneauxForm()
+        return render(request, "admin/permanences/ajouter_plage.html", {"form": form})
     
     def get_queryset(self, request):
         """Optimise les requêtes en préchargeant les inscriptions"""
@@ -76,13 +108,49 @@ class CreneauHoraireAdmin(admin.ModelAdmin):
     places_libres.short_description = 'Places disponibles'
     
     def save_model(self, request, obj, form, change):
-        """Validation supplémentaire avant sauvegarde"""
-        try:
-            obj.full_clean()
-        except Exception as e:
-            self.message_user(request, f"Erreur de validation: {e}", level='ERROR')
+        
+        repeter = form.cleaned_data.get('repeter')
+        date_fin = form.cleaned_data.get('date_fin')
+        debut = obj.heure_debut
+        fin = obj.heure_fin
+        date = obj.date
+
+         # On va créer les créneaux sur toutes les semaines si demandé
+        if repeter and date_fin and date:
+            current_date = date
+            while current_date <= date_fin:
+                self._creer_creneaux_heure_par_heure(current_date, debut, fin, obj)
+                current_date += timedelta(days=7)
+            return  # On ne sauvegarde pas l'objet original
+        else:
+            # Cas normal : découpage automatique si besoin
+            self._creer_creneaux_heure_par_heure(date, debut, fin, obj, save_original=True)
             return
-        super().save_model(request, obj, form, change)
+        
+    def _creer_creneaux_heure_par_heure(self, date, debut, fin, obj, save_original=False):
+        delta = (datetime.combine(date, fin) - datetime.combine(date, debut))
+        heures = int(delta.total_seconds() // 3600)
+        if heures > 1:
+            for i in range(heures):
+                h_debut = (datetime.combine(date, debut) + timedelta(hours=i)).time()
+                h_fin = (datetime.combine(date, debut) + timedelta(hours=i+1)).time()
+                # Vérifie si le créneau existe déjà
+                if not CreneauHoraire.objects.filter(date=date, heure_debut=h_debut).exists():
+                    CreneauHoraire.objects.create(
+                        date=date,
+                        heure_debut=h_debut,
+                        heure_fin=h_fin,
+                        max_personnes=obj.max_personnes,
+                        actif=obj.actif
+                    )
+        else:
+            if save_original:
+                # Vérifie si le créneau existe déjà
+                if not CreneauHoraire.objects.filter(date=date, heure_debut=debut).exists():
+                    super(CreneauHoraireAdmin, self).save_model(None, obj, None, False)
+
+
+
 
 
 @admin.register(Inscription)
