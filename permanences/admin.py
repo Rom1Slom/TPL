@@ -2,7 +2,7 @@ from django.contrib import admin
 from django.utils.html import format_html
 from django.urls import reverse
 from django.utils.safestring import mark_safe
-from .models import HoraireOuverture, CreneauHoraire, Inscription
+from .models import CreneauHoraire, Inscription
 from django import forms
 from django.shortcuts import render, redirect
 from django.urls import path

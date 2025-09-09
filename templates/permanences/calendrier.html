@@ -118,7 +118,7 @@
                                                         <i class="fas fa-user"></i> Occupé
                                                     </button>
                                                 {% elif user.is_authenticated and not creneau.est_passe and not creneau.user_inscription %}
-                                                    <form method="post" action="{% url 'permanences:auto_inscription' creneau.id %}" class="d-inline">
+                                                    <form method="post" action="{% url 'permanences:auto_inscription' creneau.id %}?week={{ week_start|date:'Y-m-d' }}" class="d-inline">
                                                         {% csrf_token %}
                                                         <button type="submit" class="btn btn-sm btn-success"
                                                                 onclick="return confirm('Confirmer votre inscription à ce créneau ?')">

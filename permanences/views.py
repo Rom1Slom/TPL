@@ -5,7 +5,9 @@ from django.http import JsonResponse
 from django.views.decorators.http import require_POST
 from django.utils import timezone
 from datetime import datetime, timedelta
-from .models import CreneauHoraire, Inscription, HoraireOuverture
+from .models import CreneauHoraire, Inscription
+from django.urls import reverse
+from urllib.parse import urlencode
 
 
 def is_superuser(user):
@@ -271,7 +273,14 @@ def auto_inscription(request, creneau_id):
     except Exception as e:
         messages.error(request, f"Erreur lors de l'inscription : {str(e)}")
     
-    return redirect('permanences:calendrier')
+    week = request.GET.get('week')
+
+    base_url = reverse('permanences:calendrier')
+    if week:
+        url = f"{base_url}?{urlencode({'week': week})}"
+    else:
+        url = base_url
+    return redirect(url)
 
 
 @login_required

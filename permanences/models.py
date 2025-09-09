@@ -4,38 +4,6 @@ from django.core.exceptions import ValidationError
 from datetime import datetime, time, timedelta
 
 
-class HoraireOuverture(models.Model):
-    """Définit les horaires d'ouverture du stand de marché"""
-    jour_semaine = models.IntegerField(
-        choices=[
-            (0, 'Lundi'),
-            (1, 'Mardi'),
-            (2, 'Mercredi'),
-            (3, 'Jeudi'),
-            (4, 'Vendredi'),
-            (5, 'Samedi'),
-            (6, 'Dimanche'),
-        ],
-        help_text="Jour de la semaine (0=Lundi, 6=Dimanche)"
-    )
-    heure_ouverture = models.TimeField(help_text="Heure d'ouverture")
-    heure_fermeture = models.TimeField(help_text="Heure de fermeture")
-    actif = models.BooleanField(default=True, help_text="Horaire actif")
-    
-    class Meta:
-        verbose_name = "Horaire d'ouverture"
-        verbose_name_plural = "Horaires d'ouverture"
-        unique_together = ['jour_semaine']
-        ordering = ['jour_semaine', 'heure_ouverture']
-    
-    def __str__(self):
-        jours = ['Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi', 'Dimanche']
-        return f"{jours[self.jour_semaine]} : {self.heure_ouverture} - {self.heure_fermeture}"
-    
-    def clean(self):
-        if self.heure_fermeture <= self.heure_ouverture:
-            raise ValidationError("L'heure de fermeture doit être après l'heure d'ouverture")
-
 
 class CreneauHoraire(models.Model):
     """Représente un créneau horaire d'une heure pour les permanences"""
