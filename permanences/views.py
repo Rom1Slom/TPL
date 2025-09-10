@@ -44,18 +44,8 @@ def calendrier_permanences(request):
             creneaux_par_jour[creneau.date] = []
         
         # Ajouter les informations d'inscription de l'utilisateur
-        user_inscription = None
-        if request.user.is_authenticated:
-            try:
-                user_inscription = Inscription.objects.get(
-                    utilisateur=request.user,
-                    creneau=creneau,
-                    annulee=False
-                )
-            except Inscription.DoesNotExist:
-                pass
+        creneau.user_inscription = creneau.get_user_inscription(request.user)
         
-        creneau.user_inscription = user_inscription
         creneaux_par_jour[creneau.date].append(creneau)
     
     # Naviguation semaine précédente/suivante
@@ -150,16 +140,17 @@ def annuler_inscription(request, inscription_id):
 
 @login_required
 def mes_inscriptions(request):
-    """Affiche les inscriptions de l'utilisateur connecté"""
     inscriptions = Inscription.objects.filter(
-        utilisateur=request.user
-    ).order_by('-creneau__date', '-creneau__heure_debut')
-    
-    context = {
+        utilisateur=request.user,
+        annulee=False
+    ).select_related('creneau').order_by('creneau__date', 'creneau__heure_debut')
+
+    inscriptions_a_venir = [i for i in inscriptions if not i.creneau.est_passe]
+
+    return render(request, 'permanences/mes_inscriptions.html', {
         'inscriptions': inscriptions,
-    }
-    
-    return render(request, 'permanences/mes_inscriptions.html', context)
+        'inscriptions_a_venir': inscriptions_a_venir,
+    })
 
 
 def ajax_places_disponibles(request, creneau_id):
@@ -240,66 +231,46 @@ def gestion_inscriptions(request):
 @login_required
 @require_POST
 def auto_inscription(request, creneau_id):
-    """Permet à un utilisateur de s'inscrire lui-même à un créneau"""
-    creneau = get_object_or_404(CreneauHoraire, id=creneau_id, actif=True)
-    
-    # Vérifications
-    if creneau.est_passe:
-        messages.error(request, "Impossible de s'inscrire à un créneau passé.")
-        return redirect('permanences:calendrier')
-    
-    if creneau.complet:
-        messages.error(request, "Ce créneau est complet.")
-        return redirect('permanences:calendrier')
-    
-    # Vérifier si l'utilisateur n'est pas déjà inscrit
-    inscription_existante = Inscription.objects.filter(
+    creneau = get_object_or_404(CreneauHoraire, pk=creneau_id)
+    inscription = Inscription.objects.filter(
         utilisateur=request.user,
-        creneau=creneau,
-        annulee=False
+        creneau=creneau
     ).first()
-    
-    if inscription_existante:
-        messages.warning(request, "Vous êtes déjà inscrit à ce créneau.")
-        return redirect('permanences:calendrier')
-    
-    # Créer l'inscription
-    try:
-        inscription = Inscription.objects.create(
-            utilisateur=request.user,
-            creneau=creneau
-        )
-        messages.success(request, f"Inscription confirmée pour le {creneau.date} de {creneau.heure_debut} à {creneau.heure_fin}.")
-    except Exception as e:
-        messages.error(request, f"Erreur lors de l'inscription : {str(e)}")
-    
-    week = request.GET.get('week')
-
-    base_url = reverse('permanences:calendrier')
-    if week:
-        url = f"{base_url}?{urlencode({'week': week})}"
+    if inscription:
+        if inscription.annulee:
+            inscription.annulee = False
+            inscription.date_annulation = None
+            inscription.save()
+            messages.success(request, "Votre inscription a été réactivée.")
+        else:
+            messages.info(request, "Vous êtes déjà inscrit à ce créneau.")
     else:
-        url = base_url
+        Inscription.objects.create(utilisateur=request.user, creneau=creneau)
+        messages.success(request, "Vous êtes inscrit à ce créneau.")
+    # Redirection avec la semaine courante
+    week = request.GET.get('week')
+    url = reverse('permanences:calendrier')
+    if week:
+        url += f'?week={week}'
     return redirect(url)
+
 
 
 @login_required
 @require_POST
 def auto_desinscription(request, inscription_id):
-    """Permet à un utilisateur d'annuler sa propre inscription"""
     inscription = get_object_or_404(
         Inscription,
         id=inscription_id,
         utilisateur=request.user,
         annulee=False
     )
-    
     if inscription.creneau.est_passe:
         messages.error(request, "Impossible d'annuler une inscription pour un créneau passé.")
-        return redirect('permanences:calendrier')
-    
-    inscription.annuler()
-    messages.success(request, f"Inscription annulée pour le {inscription.creneau.date} de {inscription.creneau.heure_debut} à {inscription.creneau.heure_fin}.")
-    
-    return redirect('permanences:calendrier')
+        return redirect('permanences:mes_inscriptions')
+    inscription.annulee = True
+    inscription.date_annulation = timezone.now()
+    inscription.save()
+    messages.success(request, "Votre inscription a bien été annulée.")
+    return redirect('permanences:mes_inscriptions')
 

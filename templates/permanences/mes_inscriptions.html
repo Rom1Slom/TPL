@@ -90,8 +90,8 @@
             
             {% if not inscription.annulee and not inscription.creneau.est_passe %}
             <div class="card-footer">
-                <form method="post" action="{% url 'permanences:annuler' inscription.id %}" 
-                      onsubmit="return confirm('Êtes-vous sûr de vouloir annuler cette inscription ?');">
+                <form method="post" action="{% url 'permanences:auto_desinscription' inscription.id %}" class="d-inline">
+                    <onsubmit="return confirm('Êtes-vous sûr de vouloir annuler cette inscription ?');">
                     {% csrf_token %}
                     <button type="submit" class="btn btn-sm btn-outline-danger w-100">
                         <i class="fas fa-times"></i> Annuler l'inscription
@@ -133,14 +133,8 @@
                 <div class="col-md-4">
                     <div class="text-center">
                         <h3 class="text-warning">
-                            {% with futures=0 %}
-                                {% for inscription in inscriptions %}
-                                    {% if not inscription.annulee and not inscription.creneau.est_passe %}
-                                        {% with futures=futures|add:"1" %}{% endwith %}
-                                    {% endif %}
-                                {% endfor %}
-                                {{ futures }}
-                            {% endwith %}
+                            {{ inscriptions|dictsort:"creneau.date"|length }}
+                         
                         </h3>
                         <small class="text-muted">À venir</small>
                     </div>

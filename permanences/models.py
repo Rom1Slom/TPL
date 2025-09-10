@@ -51,6 +51,9 @@ class CreneauHoraire(models.Model):
             return creneau_datetime < maintenant
         except Exception:
             return False
+    @property
+    def inscriptions_actives(self):
+        return self.inscriptions.filter(annulee=False)
     
     def clean(self):
         from django.core.exceptions import ValidationError
@@ -65,6 +68,11 @@ class CreneauHoraire(models.Model):
             if delta < timedelta(hours=1):
                 raise ValidationError("Un créneau doit durer au moins 1 heure.")
 
+    def get_user_inscription(self, user):
+        """Retourne l'inscription active (non annulée) de l'utilisateur pour ce créneau."""
+        if user.is_authenticated:
+            return self.inscriptions.filter(utilisateur=user, annulee=False).first()
+        return None
 
 class Inscription(models.Model):
     """Inscription d'un utilisateur à un créneau horaire"""

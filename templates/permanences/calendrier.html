@@ -96,7 +96,7 @@
                                             <i class="fas fa-check"></i> Inscrit
                                         </span>
                                         {% if not creneau.est_passe %}
-                                            <form method="post" action="{% url 'permanences:auto_desinscription' creneau.user_inscription.id %}" class="d-inline">
+                                            <form method="post" action="{% url 'permanences:auto_desinscription' creneau.user_inscription.id %}?week={{ week_start|date:'Y-m-d' }}"class="d-inline">
                                                 {% csrf_token %}
                                                 <button type="submit" class="btn btn-sm btn-outline-danger" 
                                                         onclick="return confirm('Confirmer l\'annulation de votre inscription ?')">
@@ -156,11 +156,13 @@
                     {% if creneau.inscriptions.count > 0 %}
                     <div class="mt-2">
                         <small class="text-muted">
-                            <i class="fas fa-users"></i> Inscrits :
-                            {% for inscription in creneau.inscriptions.all %}
-                                {% if not inscription.annulee %}
-                                    {{ inscription.utilisateur.first_name|default:inscription.utilisateur.username }}{% if not forloop.last %}, {% endif %}
-                                {% endif %}
+                            <i class="fas fa-users"></i>
+                            {{ creneau.inscriptions_actives.count }}/{{ creneau.max_personnes }} inscrits
+                            <br>
+                            {% for ins in creneau.inscriptions_actives %}
+                                {{ ins.utilisateur.username }}{% if not forloop.last %}, {% endif %}
+                            {% empty %}
+                                <span class="text-muted">Aucun inscrit</span>
                             {% endfor %}
                         </small>
                     </div>
