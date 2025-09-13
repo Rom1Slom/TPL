@@ -36,10 +36,14 @@ def calendrier_permanences(request):
         date__range=[week_start, week_end],
         actif=True
     ).prefetch_related('inscriptions__utilisateur').order_by('date', 'heure_debut')
+
+    for creneau in creneaux:
+        creneau.user_inscription = creneau.get_user_inscription(request.user)
     
     # Organiser les créneaux par jour
     creneaux_par_jour = {}
     for creneau in creneaux:
+        creneau.user_inscription = creneau.get_user_inscription(request.user)
         if creneau.date not in creneaux_par_jour:
             creneaux_par_jour[creneau.date] = []
         
@@ -267,10 +271,17 @@ def auto_desinscription(request, inscription_id):
     )
     if inscription.creneau.est_passe:
         messages.error(request, "Impossible d'annuler une inscription pour un créneau passé.")
-        return redirect('permanences:mes_inscriptions')
+        return redirect('permanences:calendrier')
     inscription.annulee = True
     inscription.date_annulation = timezone.now()
     inscription.save()
     messages.success(request, "Votre inscription a bien été annulée.")
-    return redirect('permanences:mes_inscriptions')
+    next_page = request.GET.get('next')
+    if next_page == "mes_inscriptions":
+        return redirect('permanences:mes_inscriptions')
+    week = request.GET.get('week')
+    url = reverse('permanences:calendrier')
+    if week:
+        url += f'?week={week}'
+    return redirect(url)
 
