@@ -25,7 +25,7 @@ SECRET_KEY = 'django-insecure-lvt4!yn)mj$#h(g&t*&5kjpv%65!7%b7!#$zb9nu45gvi_3r58
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ['localhost', '127.0.0.1', '.ngrok-free.app', '*', "fb36df876b1f.ngrok-free.app"]
+ALLOWED_HOSTS = ['localhost', '127.0.0.1', '82.166.125.31', 'tpl-creil.duckdns.org', '.ngrok-free.app', '*']
 
 
 # Application definition
@@ -54,7 +54,7 @@ MIDDLEWARE = [
 ROOT_URLCONF = 'inscription.urls'
 
 CSRF_TRUSTED_ORIGINS = [
-    "https://fb36df876b1f.ngrok-free.app",
+    # Ajoutez ici votre nouvelle URL ngrok quand vous la lancez
 ]
 
 TEMPLATES = [
