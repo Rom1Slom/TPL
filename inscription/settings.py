@@ -11,6 +11,7 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 """
 
 from pathlib import Path
+import os
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -20,12 +21,17 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-lvt4!yn)mj$#h(g&t*&5kjpv%65!7%b7!#$zb9nu45gvi_3r58'
+SECRET_KEY = os.environ.get(
+    'SECRET_KEY',
+    'django-insecure-lvt4!yn)mj$#h(g&t*&5kjpv%65!7%b7!#$zb9nu45gvi_3r58'
+)
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = os.environ.get('DEBUG', 'True') == 'True'
 
-ALLOWED_HOSTS = ['localhost', '127.0.0.1', '82.166.125.31', 'tpl-creil.duckdns.org', '.ngrok-free.app', '*']
+ALLOWED_HOSTS = ['localhost', '127.0.0.1', '88.166.125.31', 'tpl-creil.duckdns.org', 'bruce-pumps-pictures-district.trycloudflare.com', '*.onrender.com', '*']
+# ALLOWED_HOSTS is provided as a comma-separated env var, e.g. 'tpl-creil.onrender.com,localhost'
+ALLOWED_HOSTS = [h.strip() for h in os.environ.get('ALLOWED_HOSTS', 'localhost,127.0.0.1').split(',') if h.strip()]
 
 
 # Application definition
@@ -56,6 +62,11 @@ ROOT_URLCONF = 'inscription.urls'
 CSRF_TRUSTED_ORIGINS = [
     # Ajoutez ici votre nouvelle URL ngrok quand vous la lancez
 ]
+# CSRF trusted origins can also be provided as a comma-separated env var
+CSRF_TRUSTED_ORIGINS = [o.strip() for o in os.environ.get('CSRF_TRUSTED_ORIGINS', '').split(',') if o.strip()]
+
+# Static files: collectstatic will place static files here on Render
+STATIC_ROOT = BASE_DIR / 'staticfiles'
 
 TEMPLATES = [
     {
