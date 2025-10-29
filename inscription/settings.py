@@ -29,7 +29,7 @@ SECRET_KEY = os.environ.get(
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = os.environ.get('DEBUG', 'True') == 'True'
 
-ALLOWED_HOSTS = ['localhost', '127.0.0.1', '88.166.125.31', 'tpl-creil.duckdns.org','tpl-creil.onrender.com',  'bruce-pumps-pictures-district.trycloudflare.com', '*.onrender.com', '*']
+ALLOWED_HOSTS = ['localhost', '127.0.0.1', '88.166.125.31', 'tpl-creil.duckdns.org','tpl-creil.fr','www.tpl-creil.fr','tpl-creil.onrender.com',  'bruce-pumps-pictures-district.trycloudflare.com', '*.onrender.com', '*']
 # ALLOWED_HOSTS is provided as a comma-separated env var, e.g. 'tpl-creil.onrender.com,localhost'
 ALLOWED_HOSTS = [h.strip() for h in os.environ.get('ALLOWED_HOSTS', 'localhost,127.0.0.1').split(',') if h.strip()]
 
