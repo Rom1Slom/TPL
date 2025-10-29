@@ -29,7 +29,7 @@ SECRET_KEY = os.environ.get(
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = os.environ.get('DEBUG', 'True') == 'True'
 
-ALLOWED_HOSTS = ['localhost', '127.0.0.1', '88.166.125.31', 'tpl-creil.duckdns.org', 'bruce-pumps-pictures-district.trycloudflare.com', '*.onrender.com', '*']
+ALLOWED_HOSTS = ['localhost', '127.0.0.1', '88.166.125.31', 'tpl-creil.duckdns.org','tpl-creil.onrender.com',  'bruce-pumps-pictures-district.trycloudflare.com', '*.onrender.com', '*']
 # ALLOWED_HOSTS is provided as a comma-separated env var, e.g. 'tpl-creil.onrender.com,localhost'
 ALLOWED_HOSTS = [h.strip() for h in os.environ.get('ALLOWED_HOSTS', 'localhost,127.0.0.1').split(',') if h.strip()]
 
@@ -49,6 +49,7 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
+    'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -67,6 +68,9 @@ CSRF_TRUSTED_ORIGINS = [o.strip() for o in os.environ.get('CSRF_TRUSTED_ORIGINS'
 
 # Static files: collectstatic will place static files here on Render
 STATIC_ROOT = BASE_DIR / 'staticfiles'
+
+# WhiteNoise configuration for static files serving
+STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
 TEMPLATES = [
     {
