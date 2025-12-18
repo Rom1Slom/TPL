@@ -40,78 +40,89 @@
     </style>
 </head>
 <body>
-    <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
-        <div class="container">
-            <a class="navbar-brand" href="{% url 'permanences:calendrier' %}">
-                <i class="fas fa-store"></i> Permanences TPL - Gare de Creil
-            </a>
-            
-            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
-                <span class="navbar-toggler-icon"></span>
-            </button>
-            
-            <div class="collapse navbar-collapse" id="navbarNav">
-                <ul class="navbar-nav me-auto">
-                    <li class="nav-item">
-                        <a class="nav-link" href="{% url 'permanences:calendrier' %}">
+            <nav class="navbar navbar-expand-lg navbar-dark bg-primary" role="navigation" aria-label="Navigation principale">
+                <div class="container">
+                    <a class="navbar-brand"
+                    href="{% if user.is_authenticated %}{% url 'permanences:calendrier' %}{% else %}{% url 'login' %}{% endif %}">
+                    <i class="fas fa-store"></i> Permanences TPL - Gare de Creil
+                    </a>
+
+                    <button class="navbar-toggler" type="button" data-bs-toggle="collapse"
+                            data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false"
+                            aria-label="Afficher le menu">
+                    <span class="navbar-toggler-icon"></span>
+                    </button>
+
+                    <div class="collapse navbar-collapse" id="navbarNav">
+                    <ul class="navbar-nav me-auto">
+                        {% if user.is_authenticated %}
+                        <li class="nav-item">
+                            <a class="nav-link {% if request.path == request.build_absolute_uri|cut:request.scheme|cut:'://'|cut:request.get_host|cut:'/permanences/' or request.path == '/permanences/' %}active{% endif %}"
+                            href="{% url 'permanences:calendrier' %}">
                             <i class="fas fa-calendar"></i> Calendrier
-                        </a>
-                    </li>
-                    {% if user.is_authenticated %}
-                    <li class="nav-item">
-                        <a class="nav-link" href="{% url 'permanences:mes_inscriptions' %}">
-                            <i class="fas fa-list"></i> Mes inscriptions
-                        </a>
-                    </li>
-                    {% endif %}
-                    {% if user.is_superuser %}
-                    <li class="nav-item">
-                        <a class="nav-link" href="{% url 'permanences:gestion' %}">
-                            <i class="fas fa-users-cog"></i> Gestion
-                        </a>
-                    </li>
-                    {% endif %}
-                </ul>
-                
-                <ul class="navbar-nav">
-                    {% if user.is_authenticated %}
-                        <li class="nav-item dropdown">
-                            <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" data-bs-toggle="dropdown">
-                                <i class="fas fa-user"></i> {{ user.username }}
                             </a>
-    
-    <ul class="dropdown-menu">
-                                <li><a class="dropdown-item" href="{% url 'accounts:profil' %}">
-                                    <i class="fas fa-user-circle"></i> Mon profil
-                                </a></li>
-                                {% if user.is_staff %}
-                                <li><hr class="dropdown-divider"></li>
-                                <li><a class="dropdown-item" href="{% url 'admin:index' %}">
-                                    <i class="fas fa-cog"></i> Administration
-                                </a></li>
-                                {% endif %}
-                                <li><hr class="dropdown-divider"></li>
-                                <li>
-                                    <form method="post" action="{% url 'logout' %}" class="d-inline">
-                                        {% csrf_token %}
-                                        <button type="submit" class="dropdown-item border-0 bg-transparent logout-btn">
-                                            <i class="fas fa-sign-out-alt"></i> Déconnexion
-                                        </button>
-                                    </form>
-                                </li>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link {% if request.path == '/permanences/mes/' %}active{% endif %}"
+                            href="{% url 'permanences:mes_inscriptions' %}">
+                            <i class="fas fa-list"></i> Mes inscriptions
+                            </a>
+                        </li>
+                        {% if user.is_superuser %}
+                        <li class="nav-item">
+                            <a class="nav-link {% if request.path == '/permanences/gestion/' %}active{% endif %}"
+                            href="{% url 'permanences:gestion' %}">
+                            <i class="fas fa-users-cog"></i> Gestion
+                            </a>
+                        </li>
+                        {% endif %}
+                        {% endif %}
+                    </ul>
+
+                    <ul class="navbar-nav">
+                        {% if user.is_authenticated %}
+                        <li class="nav-item dropdown">
+                            <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown"
+                            role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                            <i class="fas fa-user"></i> {{ user.username }}
+                            </a>
+                            <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="navbarDropdown">
+                            <li>
+                                <a class="dropdown-item" href="{% url 'accounts:profil' %}">
+                                <i class="fas fa-user-circle"></i> Mon profil
+                                </a>
+                            </li>
+                            {% if user.is_staff %}
+                            <li><hr class="dropdown-divider"></li>
+                            <li>
+                                <a class="dropdown-item" href="{% url 'admin:index' %}">
+                                <i class="fas fa-cog"></i> Administration
+                                </a>
+                            </li>
+                            {% endif %}
+                            <li><hr class="dropdown-divider"></li>
+                            <li>
+                                <form method="post" action="{% url 'logout' %}" class="d-inline">
+                                {% csrf_token %}
+                                <button type="submit" class="dropdown-item">
+                                    <i class="fas fa-sign-out-alt"></i> Déconnexion
+                                </button>
+                                </form>
+                            </li>
                             </ul>
                         </li>
-                    {% else %}
+                        {% else %}
                         <li class="nav-item">
-                            <a class="nav-link" href="{% url 'login' %}">
-                                <i class="fas fa-sign-in-alt"></i> Connexion
+                            <a class="nav-link {% if request.path == '/accounts/login/' or request.path == '/' %}active{% endif %}"
+                            href="{% url 'login' %}">
+                            <i class="fas fa-sign-in-alt"></i> Connexion
                             </a>
                         </li>
-                    {% endif %}
-                </ul>
-            </div>
-        </div>
-    </nav>
+                        {% endif %}
+                    </ul>
+                    </div>
+                </div>
+            </nav>
 
     <main class="container mt-4">
         {% if messages %}
@@ -138,7 +149,7 @@
 
     <footer class="bg-light text-center text-muted mt-5 py-3">
         <div class="container">
-            <p>&copy; 2025 Permanences Stand de Marché. Système de gestion des créneaux.</p>
+            <p>&copy; 2025 Permanences au présentoir. Système de gestion des créneaux.</p>
         </div>
     </footer>
 

@@ -2,6 +2,7 @@ from django.db import models
 from django.contrib.auth.models import User
 from django.core.exceptions import ValidationError
 from datetime import datetime, time, timedelta
+from django.utils import timezone
 
 
 
@@ -44,13 +45,18 @@ class CreneauHoraire(models.Model):
     
     @property
     def est_passe(self):
-        """Vérifie si le créneau est passé"""
-        try:
-            maintenant = datetime.now()
-            creneau_datetime = datetime.combine(self.date, self.heure_debut)
-            return creneau_datetime < maintenant
-        except Exception:
-            return False
+        """
+        True si le créneau est terminé.
+        Évite la comparaison aware/naïve en travaillant sur date + time séparés.
+        """
+        now = timezone.localtime()  # toujours aware si USE_TZ
+        if self.date < now.date():
+            return True
+        if self.date == now.date() and self.heure_fin <= now.time():
+            return True
+        return False
+        
+        
     @property
     def inscriptions_actives(self):
         return self.inscriptions.filter(annulee=False)
@@ -139,8 +145,8 @@ class Inscription(models.Model):
             pass
     
     def annuler(self):
-        """Annule l'inscription"""
+        """Annule l'inscription (timestamps aware)"""
         if not self.annulee:
             self.annulee = True
-            self.date_annulation = datetime.now()
+            self.date_annulation = timezone.now()
             self.save()

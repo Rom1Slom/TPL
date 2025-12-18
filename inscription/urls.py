@@ -19,12 +19,13 @@ from django.urls import path, include
 from django.views.generic import RedirectView
 from django.contrib.auth import views as auth_views
 from accounts.views import CustomLoginView
-
+from inscription.views import health
 urlpatterns = [
+    path('health/', health, name='health'),
     path('admin/', admin.site.urls),
     path('accounts/login/', CustomLoginView.as_view(), name='login'),
     path('accounts/logout/', auth_views.LogoutView.as_view(), name='logout'),
     path('accounts/', include('accounts.urls')),
     path('permanences/', include('permanences.urls')),
-    path('', RedirectView.as_view(url='/permanences/', permanent=False)),
+    path('', CustomLoginView.as_view(), name='home_login'), # Redirect to login page
 ]

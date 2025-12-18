@@ -43,7 +43,10 @@ def profil_utilisateur(request):
 class CustomLoginView(LoginView):
     """Vue de connexion personnalisée pour un meilleur débogage"""
     template_name = 'registration/login.html'
-    success_url = reverse_lazy('permanences:calendrier')
+    redirect_authenticated_user = True # évite de revoir le formulaire quand déjà connecté
+
+    def get_success_url(self):
+        return reverse_lazy('permanences:calendrier')
     
     def form_valid(self, form):
         """Appelé quand le formulaire est valide"""

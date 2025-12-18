@@ -4,6 +4,7 @@ from django.contrib import messages
 from django.http import JsonResponse
 from django.views.decorators.http import require_POST
 from django.utils import timezone
+from django.db import models
 from datetime import datetime, timedelta
 from .models import CreneauHoraire, Inscription
 from django.urls import reverse
@@ -14,7 +15,7 @@ def is_superuser(user):
     """Vérifie si l'utilisateur est un super utilisateur"""
     return user.is_superuser
 
-
+@login_required
 def calendrier_permanences(request):
     """Vue principale affichant le calendrier des permanences"""
     # Récupérer la semaine courante ou celle spécifiée
@@ -144,18 +145,18 @@ def annuler_inscription(request, inscription_id):
 
 @login_required
 def mes_inscriptions(request):
-    inscriptions = Inscription.objects.filter(
-        utilisateur=request.user,
-        annulee=False
-    ).select_related('creneau').order_by('creneau__date', 'creneau__heure_debut')
-
-    inscriptions_a_venir = [i for i in inscriptions if not i.creneau.est_passe]
-
+    now = timezone.now()
+    inscriptions_a_venir = (Inscription.objects
+        .filter(utilisateur=request.user, annulee=False)
+        .select_related('creneau')
+        .filter(
+            models.Q(creneau__date__gt=now.date()) |
+            models.Q(creneau__date=now.date(), creneau__heure_fin__gt=now.time())
+        )
+        .order_by('creneau__date', 'creneau__heure_debut'))
     return render(request, 'permanences/mes_inscriptions.html', {
-        'inscriptions': inscriptions,
         'inscriptions_a_venir': inscriptions_a_venir,
     })
-
 
 def ajax_places_disponibles(request, creneau_id):
     """Retourne le nombre de places disponibles pour un créneau (AJAX)"""

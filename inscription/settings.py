@@ -92,6 +92,10 @@ TEMPLATES = [
 WSGI_APPLICATION = 'inscription.wsgi.application'
 
 
+LOGIN_URL = "login" 
+LOGIN8REDIRECT_URL = "permanences:calendrier"
+LOGOUT_REDIRECT_URL = "login"
+
 # Database
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
 
