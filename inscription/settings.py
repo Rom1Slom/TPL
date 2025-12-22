@@ -31,8 +31,14 @@ SECRET_KEY = os.environ.get(
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = os.environ.get('DEBUG', 'True') == 'True'
 
-# ALLOWED_HOSTS is provided as a comma-separated env var, e.g. 'tpl-creil.onrender.com,localhost'
-ALLOWED_HOSTS = [h.strip() for h in os.environ.get('ALLOWED_HOSTS', 'localhost,127.0.0.1','192.168.1.84').split(',') if h.strip()]
+
+# Ajout du domaine tpl-creil.fr pour accès externe
+ALLOWED_HOSTS = [
+    h.strip() for h in os.environ.get(
+        'ALLOWED_HOSTS',
+        'localhost,127.0.0.1,192.168.1.84,88.191.201.94,tpl-creil.fr,www.tpl-creil.fr'
+    ).split(',') if h.strip()
+]
 
 
 # Application definition
@@ -45,7 +51,7 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'permanences',
-    'accounts',
+    'accounts', 
 ]
 
 MIDDLEWARE = [
@@ -62,10 +68,8 @@ MIDDLEWARE = [
 ROOT_URLCONF = 'inscription.urls'
 
 CSRF_TRUSTED_ORIGINS = [
-    # Ajoutez ici votre nouvelle URL ngrok quand vous la lancez
+    "https://tpl-creil.fr",
 ]
-# CSRF trusted origins can also be provided as a comma-separated env var
-CSRF_TRUSTED_ORIGINS = [o.strip() for o in os.environ.get('CSRF_TRUSTED_ORIGINS', '').split(',') if o.strip()]
 
 # Static files: collectstatic will place static files here on Render
 STATIC_ROOT = BASE_DIR / 'staticfiles'
